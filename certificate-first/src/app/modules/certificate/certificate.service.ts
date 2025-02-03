@@ -1,7 +1,7 @@
+import { createHash } from 'crypto';
 import httpStatus from 'http-status';
 import { getContract } from '../../../connection';
 import ApiError from '../../../errors/ApiError';
-
 const create = async (payload: any) => {
   const contract = getContract();
   if (!contract) {
@@ -21,18 +21,23 @@ const create = async (payload: any) => {
     issueDate,
   } = payload;
 
-  
+  const hash = await createHash('sha256')
+    .update(
+      `${certificateID}${studentName}${university}${department}${course}${cgpa}${issueDate}`,
+    )
+    .digest('hex');
 
   const result = await contract.submitTransaction(
     'CreateCertificate',
-    'certa1211',
-    'Jodfhn ISLAM',
-    'MIT',
-    'Computer Science',
-    'Blockchain 101',
-    (3.9).toString(),
-    '2025-01-01',
-    'hdfhdfhdfhdfhghfghfg',
+
+    certificateID,
+    studentName,
+    university,
+    department,
+    course,
+    cgpa.toString(),
+    issueDate,
+    hash,
   );
 
   return result;
