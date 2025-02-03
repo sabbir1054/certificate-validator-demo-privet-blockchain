@@ -29,7 +29,6 @@ const create = async (payload: any) => {
 
   const result = await contract.submitTransaction(
     'CreateCertificate',
-
     certificateID,
     studentName,
     university,
@@ -112,15 +111,44 @@ const updateCertificate = async (
     );
   }
 
-  const { course = '', department = '', cgpa = '' } = updatedData;
+  if (!certificateID) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'certificateID is required.');
+  }
+  const isExist = await contract.evaluateTransaction(
+    'ReadCertificate',
+    certificateID,
+  );
 
+  // Convert buffer to string
+  const resultString = Buffer.from(isExist).toString('utf8');
+  const previousData = JSON.parse(resultString.trim());
+
+  const updatedInfo = {
+    course: updatedData?.course ? updatedData.course : previousData.course,
+    department: updatedData?.department
+      ? updatedData.department
+      : previousData.department,
+    cgpa: updatedData?.cgpa ? updatedData.cgpa : previousData.cgpa,
+    studentName: updatedData?.studentName
+      ? updatedData.studentName
+      : previousData.studentName,
+  };
+  console.log(">>",updatedInfo);
+  
+  const hash = await createHash('sha256')
+    .update(
+      `${certificateID}${updatedInfo.studentName}${previousData.university}${updatedInfo.department}${updatedInfo.course}${updatedInfo.cgpa}${previousData.issueDate}`,
+    )
+    .digest('hex');
   // Call the smart contract function to update the certificate
   const result = await contract.submitTransaction(
     'UpdateCertificate',
     certificateID,
-    course,
-    department,
-    cgpa.toString(), // Convert number to string, as Fabric only accepts string arguments
+    hash,
+    updatedInfo.course,
+    updatedInfo.department,
+    updatedInfo.cgpa.toString(), // Convert number to string, as Fabric only accepts string arguments
+    updatedInfo.studentName,
   );
   return result;
 };

@@ -72,15 +72,18 @@ export class CertificateContract extends Contract {
     public async UpdateCertificate(
         ctx: Context,
         certificateID: string,
+        hash: string,
         course?: string,
         department?: string,
-        cgpa?: number
+        cgpa?: number,
+        studentName?: string
     ): Promise<void> {
         const certificateString = await this.ReadCertificate(
             ctx,
             certificateID
         );
         const certificate = JSON.parse(certificateString) as Asset;
+        certificate.hash = hash;
         if (course) {
             certificate.course = course;
         }
@@ -90,7 +93,9 @@ export class CertificateContract extends Contract {
         if (cgpa) {
             certificate.cgpa = cgpa;
         }
-
+        if (studentName) {
+            certificate.studentName = studentName;
+        }
         await ctx.stub.putState(
             certificateID,
             Buffer.from(stringify(sortKeysRecursive(certificate)))
