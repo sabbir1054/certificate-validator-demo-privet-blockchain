@@ -1,10 +1,9 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import httpStatus from 'http-status';
 import catchAsync from '../../../shared/catchAsync';
 import sendResponse from '../../../shared/sendResponse';
 import { certificateService } from './certificate.service';
 const createNew = catchAsync(async (req: Request, res: Response) => {
- 
   const result = await certificateService.create(req.body);
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -44,17 +43,17 @@ const deleteCertificate = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
-const verifyCertificate = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { hash } = req.body;
-  const result = await certificateService.verifyCertificate(id, hash);
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Certificate',
-    data: result,
-  });
-});
+const verifyCertificate = catchAsync(
+  async (req: any, res: Response, next: NextFunction) => {
+    const result = await certificateService.verifyCertificate(req, next);
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Certificate',
+      data: result,
+    });
+  },
+);
 
 const updateCertificate = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;

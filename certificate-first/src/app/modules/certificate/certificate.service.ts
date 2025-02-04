@@ -1,7 +1,11 @@
 import { createHash } from 'crypto';
+import { NextFunction } from 'express';
+import fs from 'fs';
 import httpStatus from 'http-status';
+import path from 'path';
 import { getContract } from '../../../connection';
 import ApiError from '../../../errors/ApiError';
+import { extractText } from '../../../helpers/textExtractor';
 const create = async (payload: any) => {
   const contract = getContract();
   if (!contract) {
@@ -133,8 +137,7 @@ const updateCertificate = async (
       ? updatedData.studentName
       : previousData.studentName,
   };
-  console.log(">>",updatedInfo);
-  
+
   const hash = await createHash('sha256')
     .update(
       `${certificateID}${updatedInfo.studentName}${previousData.university}${updatedInfo.department}${updatedInfo.course}${updatedInfo.cgpa}${previousData.issueDate}`,
@@ -153,10 +156,7 @@ const updateCertificate = async (
   return result;
 };
 
-const verifyCertificate = async (
-  certificateID: string,
-  providedHash: string,
-) => {
+const verifyCertificate = async (req: any, next: NextFunction) => {
   const contract = getContract();
   if (!contract) {
     throw new ApiError(
@@ -164,7 +164,39 @@ const verifyCertificate = async (
       'Failed to initialize Fabric connection.',
     );
   }
-  if (!certificateID || !providedHash) {
+  const deletePhoto = async (photoLink: string) => {
+    // Delete the image file from the server
+    const filePath = path.join(
+      process.cwd(),
+      'uploads/userPhoto',
+      path.basename(photoLink),
+    );
+    if (fs.existsSync(filePath)) {
+      try {
+        await fs.promises.unlink(filePath); // Using fs.promises.unlink for a promise-based approach
+      } catch (err) {
+        throw new ApiError(
+          httpStatus.NOT_FOUND,
+          `Failed to delete image or database record`,
+        );
+      }
+    } else {
+      throw new ApiError(
+        httpStatus.NOT_FOUND,
+        'Image not found in the directory',
+      );
+    }
+  };
+  const imagePath = path.resolve(process.cwd(), 'uploads', req.body.photo);
+
+  const result = await extractText(imagePath);
+  console.log(result);
+  const hash = await createHash('sha256')
+    .update(
+      `${result.certificateID}${result.studentName}${result.university}${result.department}${result.course}${result.cgpa}${result.issueDate}`,
+    )
+    .digest('hex');
+  /* if (!certificateID || !providedHash) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'certificateID and providedHash are required.',
@@ -182,7 +214,7 @@ const verifyCertificate = async (
   const resultString = Buffer.from(result).toString('utf8');
 
   // Trim any unwanted characters and parse JSON
-  return resultString;
+  return resultString;*/
 };
 
 const deleteCertificate = async (certificateID: string) => {
