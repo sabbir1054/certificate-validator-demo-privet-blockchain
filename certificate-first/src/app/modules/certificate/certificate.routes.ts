@@ -11,7 +11,7 @@ router.post(
   FileUploadHelper.upload.single('file'),
   (req: Request, res: Response, next: NextFunction) => {
     if (req.file) {
-      req.body.photo = `${req.file.filename.replace(/\s+/g, '_')}`;
+      req.body.photo = `${req.file.filename}`;
     }
     return CertificateController.verifyCertificate(req, res, next);
   },

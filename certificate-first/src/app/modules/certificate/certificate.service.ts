@@ -168,7 +168,7 @@ const verifyCertificate = async (req: any, next: NextFunction) => {
     // Delete the image file from the server
     const filePath = path.join(
       process.cwd(),
-      'uploads/userPhoto',
+      'uploads',
       path.basename(photoLink),
     );
     if (fs.existsSync(filePath)) {
@@ -190,13 +190,14 @@ const verifyCertificate = async (req: any, next: NextFunction) => {
   const imagePath = path.resolve(process.cwd(), 'uploads', req.body.photo);
 
   const result = await extractText(imagePath);
-  console.log(result);
+  // console.log(result);
+
   const hash = await createHash('sha256')
     .update(
       `${result.certificateID}${result.studentName}${result.university}${result.department}${result.course}${result.cgpa}${result.issueDate}`,
     )
     .digest('hex');
-  /* if (!certificateID || !providedHash) {
+  if (!result.certificateID || !hash) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'certificateID and providedHash are required.',
@@ -204,17 +205,20 @@ const verifyCertificate = async (req: any, next: NextFunction) => {
   }
 
   // Call the VerifyCertificate chaincode function
-  const result = await contract.evaluateTransaction(
+  const finalResult = await contract.evaluateTransaction(
     'VerifyCertificate',
-    certificateID,
-    providedHash,
+    result.certificateID,
+    hash,
   );
 
-  // Convert buffer result to boolean
-  const resultString = Buffer.from(result).toString('utf8');
+  // // Convert buffer result to boolean
+  const resultString = Buffer.from(finalResult).toString('utf8');
 
   // Trim any unwanted characters and parse JSON
-  return resultString;*/
+  if (resultString) {
+    deletePhoto(req.body.photo);
+  }
+  return resultString;
 };
 
 const deleteCertificate = async (certificateID: string) => {

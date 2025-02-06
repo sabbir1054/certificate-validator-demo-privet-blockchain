@@ -1,39 +1,52 @@
+import fs from 'fs';
+import httpStatus from 'http-status';
 import path from 'path';
 import Tesseract from 'tesseract.js';
+import ApiError from '../errors/ApiError';
 
-// Function to extract text from image
+// Function to extract text from an image
 export const extractText = async (image: string) => {
-  // Ensure the image path is absolute
-  const imagePath = path.isAbsolute(image) ? image : path.resolve(image);
-  console.log(`Processing Image: ${imagePath}`);
-
   try {
+    // Ensure the image path is absolute
+    const imagePath = path.isAbsolute(image) ? image : path.resolve(image);
+    // console.log(`Processing Image: ${imagePath}`);
+
+    // Check if the file is accessible
+    await fs.promises.access(imagePath, fs.constants.R_OK);
+    // console.log('File is accessible, proceeding...');
+
+    // Perform OCR using Tesseract.js
     const {
       data: { text },
     } = await Tesseract.recognize(imagePath, 'eng');
 
-    // Define regex patterns to extract specific details accurately
-    const patterns: any = {
-      certificateID: /Certificate ID:\s*([\w-]+)/i,
-      studentName: /presented to\s*([\w\s]+?)\n/i, // Extracts name until the first newline
-      university: /at\s+([\w\s]+?)\s*\n/i, // Extracts only the university name
-      department: /Department of\s+([\w\s]+?)\s*\n/i, // Extracts only department name
-      course: /course of study in\s+([\w\s]+?)\s*\n/i, // Extracts only course name
-      cgpa: /GPA of\s*([\d.]+\/\d.\d)/i, // Extracts GPA in format "3.9/4.0"
-      issueDate: /Awarded this\s*(.+?)\n/i, // Extracts issue date
+    // Extract required fields using regex
+    const certificateIDMatch = text.match(/Certificate ID:\s*([A-Za-z0-9-]+)/);
+    const studentNameMatch = text.match(
+      /This is to certify that\s*(.+?)\s*has successfully/,
+    );
+    const universityMatch = text.match(/(.*) University/);
+    const departmentMatch = text.match(/Department of (.+)/);
+    const courseMatch = text.match(
+      /completed the course\s*([\w\s]+)\s*in the Department/,
+    );
+    const cgpaMatch = text.match(/CGPA of\s*([\d.]+)/);
+    const issueDateMatch = text.match(/Issued on:\s*([\d-]+)/);
+
+    const certificateData = {
+      certificateID: certificateIDMatch ? certificateIDMatch[1] : null,
+      studentName: studentNameMatch ? studentNameMatch[1].trim() : null,
+      university: universityMatch
+        ? `${universityMatch[1].trim()} University`
+        : null,
+      department: departmentMatch ? departmentMatch[1].trim() : null,
+      course: courseMatch ? courseMatch[1].trim() : null,
+      cgpa: cgpaMatch ? parseFloat(cgpaMatch[1]) : null,
+      issueDate: issueDateMatch ? issueDateMatch[1] : null,
     };
 
-    // Extract and clean data
-    const certificateData: any = {};
-    for (const key in patterns) {
-      const match = text.match(patterns[key]);
-      certificateData[key] = match
-        ? match[1].replace(/\n/g, ' ').trim()
-        : 'Not Found';
-    }
-
     return certificateData;
-  } catch (error) {
-    console.error('Error extracting text:', error);
+  } catch (error: any) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Certificate not found ');
   }
 };
