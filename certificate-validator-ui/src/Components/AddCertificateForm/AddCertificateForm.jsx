@@ -64,8 +64,12 @@ const AddCertificateForm = () => {
         timer: 1500,
       });
     } catch (error) {
-      console.error("Error submitting certificate:", error);
-      alert("Failed to submit certificate. Please try again.");
+      Swal.fire({
+        title: "Something went Wrong",
+        icon: "error",
+        showConfirmButton: false,
+        timer: 1500,
+      });
     }
   };
 

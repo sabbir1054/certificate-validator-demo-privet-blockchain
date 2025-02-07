@@ -1,7 +1,13 @@
 import { Delete, Edit, Visibility } from "@mui/icons-material";
 import {
   Box,
+  Button,
+  CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Paper,
   Table,
@@ -10,30 +16,122 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router";
-const API_BASE_URL = import.meta.env.VITE_BACKEND_API_LINK; // Get API link from env
+import Swal from "sweetalert2";
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_API_LINK;
 
 const CertificateTable = () => {
+  const [loading, setIsloading] = useState(false);
   const [certificates, setCertificates] = useState([]);
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/certificate`)
-      .then((res) => res.json())
-      .then((data) => setCertificates(data?.data));
-  }, []);
+  const [open, setOpen] = useState(false);
+  const [selectedCert, setSelectedCert] = useState(null);
+  const [editedData, setEditedData] = useState({
+    studentName: "",
+    cgpa: "",
+  });
 
-  const handleEdit = (id) => {
-    console.log("Edit certificate:", id);
-    alert(`Editing certificate: ${id}`);
+  const handleEdit = (cert) => {
+    setSelectedCert(cert);
+    setEditedData({
+      id: cert.certificateID,
+      studentName: cert.studentName,
+      cgpa: cert.cgpa,
+    });
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setSelectedCert(null);
+  };
+
+  const handleChange = (e) => {
+    setEditedData({ ...editedData, [e.target.name]: e.target.value });
+  };
+
+  const handleSave = () => {
+    // const updatedCertificates = certificates.map((cert) =>
+    //   cert.certificateID === selectedCert.certificateID
+    //     ? {
+    //         ...cert,
+    //         studentName: editedData.studentName,
+    //         cgpa: editedData.cgpa,
+    //       }
+    //     : cert
+    // );
+    // setCertificates(updatedCertificates);
+    setOpen(false);
+
+    // You can send an API request here to update the data in the backend
+    fetch(`${API_BASE_URL}/certificate/update/${selectedCert.certificateID}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editedData),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.statusCode === 200) {
+          Swal.fire({
+            title: "Certificate updated",
+            icon: "success",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+        } else {
+          Swal.fire({
+            title: "Something went wrong",
+            icon: "error",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+        }
+      });
   };
 
   const handleDelete = (id) => {
-    console.log("Delete certificate:", id);
-    alert(`Deleting certificate: ${id}`);
+    fetch(`${API_BASE_URL}/certificate/delete/${id}`, {
+      method: "DELETE",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log(data);
+
+        if (data?.statusCode === 200) {
+          Swal.fire({
+            title: "Certificate delete",
+            icon: "success",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+          setIsloading(true);
+        } else {
+          Swal.fire({
+            title: "Something went wrong",
+            icon: "error",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+        }
+      });
   };
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/certificate`)
+      .then((res) => res.json())
+      .then((data) => {
+        setCertificates(data?.data);
+        setIsloading(false);
+      });
+  }, [handleSave, handleDelete]);
+
+  if (loading) {
+    return <CircularProgress />;
+  }
   return (
     <Box sx={{ p: 3 }}>
       <Container>
@@ -43,7 +141,7 @@ const CertificateTable = () => {
         <Box sx={{ overflowX: "auto" }}>
           <TableContainer
             component={Paper}
-            sx={{ boxShadow: 3, minWidth: 1200 }}
+            sx={{ boxShadow: 3, minWidth: 1300 }}
           >
             <Table>
               <TableHead sx={{ backgroundColor: "#f5f5f5" }}>
@@ -70,13 +168,16 @@ const CertificateTable = () => {
                     <b>Issue Date</b>
                   </TableCell>
                   <TableCell>
+                    <b>Status</b>
+                  </TableCell>
+                  <TableCell>
                     <b>Actions</b>
                   </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {certificates?.map((cert, index) => (
-                  <TableRow key={index}>
+                {certificates?.map((cert) => (
+                  <TableRow key={cert.certificateID}>
                     <TableCell>{cert.certificateID}</TableCell>
                     <TableCell>{cert.studentName}</TableCell>
                     <TableCell>{cert.university}</TableCell>
@@ -84,6 +185,7 @@ const CertificateTable = () => {
                     <TableCell>{cert.course}</TableCell>
                     <TableCell>{cert.cgpa.toFixed(2)}</TableCell>
                     <TableCell>{cert.issueDate}</TableCell>
+                    <TableCell>{cert.status}</TableCell>
                     <TableCell>
                       <Tooltip title="View">
                         <Link to={`/certificate/${cert.certificateID}`}>
@@ -94,7 +196,7 @@ const CertificateTable = () => {
                       </Tooltip>
                       <Tooltip title="Edit">
                         <IconButton
-                          onClick={() => handleEdit(cert.certificateID)}
+                          onClick={() => handleEdit(cert)}
                           color="warning"
                         >
                           <Edit />
@@ -116,6 +218,41 @@ const CertificateTable = () => {
           </TableContainer>
         </Box>
       </Container>
+
+      {/* Edit Dialog */}
+      <Dialog open={open} onClose={handleClose}>
+        <DialogTitle>Edit Certificate</DialogTitle>
+        <DialogContent>
+          <TextField
+            margin="dense"
+            label="Student Name"
+            name="studentName"
+            fullWidth
+            variant="outlined"
+            value={editedData.studentName}
+            onChange={handleChange}
+          />
+          <TextField
+            margin="dense"
+            label="CGPA"
+            name="cgpa"
+            fullWidth
+            variant="outlined"
+            type="number"
+            inputProps={{ step: "0.01", min: "0", max: "4" }}
+            value={editedData.cgpa}
+            onChange={handleChange}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="error">
+            Cancel
+          </Button>
+          <Button onClick={handleSave} color="primary">
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
