@@ -7,7 +7,7 @@ import { FileUploadHelper } from '../../../helpers/fileuploader';
 import { CertificateController } from './certificate.controller';
 const router = express.Router();
 router.post(
-  '/verifyCertificate/:id',
+  '/verifyCertificate/',
   FileUploadHelper.upload.single('file'),
   (req: Request, res: Response, next: NextFunction) => {
     if (req.file) {

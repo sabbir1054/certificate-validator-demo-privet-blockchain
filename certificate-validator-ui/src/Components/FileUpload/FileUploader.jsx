@@ -7,9 +7,12 @@ import {
   Paper,
   Typography,
 } from "@mui/material";
+import axios from "axios";
 // import axios from "axios"; // For API request
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
+import Swal from "sweetalert2";
+const API_BASE_URL = import.meta.env.VITE_BACKEND_API_LINK;
 
 const FileUploader = () => {
   const { handleSubmit, setValue } = useForm();
@@ -50,13 +53,37 @@ const FileUploader = () => {
     formData.append("file", file);
 
     try {
-      const response = await axios.post("/api/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      console.log("File uploaded successfully:", response.data);
+      const response = await axios.post(
+        `${API_BASE_URL}/certificate/verifyCertificate`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+      if (response?.data) {
+        if (response.data?.data === "true") {
+          Swal.fire({
+            title: "Certificate is Valid",
+            icon: "success",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+        } else {
+          Swal.fire({
+            title: "Invalid Certificate",
+            icon: "error",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+        }
+      }
     } catch (error) {
-      console.error("Upload failed:", error);
+      Swal.fire({
+        title: "Something went wrong !",
+        icon: "error",
+        showConfirmButton: false,
+        timer: 1500,
+      });
     }
   };
 
@@ -124,7 +151,10 @@ const FileUploader = () => {
                     right: 5,
                     bgcolor: "rgba(0,0,0,0.6)",
                     color: "white",
-                    "&:hover": { bgcolor: "rgba(0,0,0,0.8)",cursor:"pointer" },
+                    "&:hover": {
+                      bgcolor: "rgba(0,0,0,0.8)",
+                      cursor: "pointer",
+                    },
                   }}
                   onClick={handleDelete}
                 >
