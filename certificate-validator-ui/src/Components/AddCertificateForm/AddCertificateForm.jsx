@@ -41,8 +41,6 @@ const AddCertificateForm = () => {
   };
 
   const onSubmit = async (data) => {
-    console.log(data);
-
     try {
       const response = await axios.post(
         `${API_BASE_URL}/certificate/create`,
