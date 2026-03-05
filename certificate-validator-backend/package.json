@@ -1,0 +1,22 @@
+{
+  "name": "certificate-validator-backend",
+  "version": "1.0.0",
+  "description": "Simple Express + Hyperledger Fabric Certificate Validator",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": ["hyperledger", "fabric", "certificate", "blockchain"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.12.5",
+    "@hyperledger/fabric-gateway": "^1.7.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "tesseract.js": "^6.0.0"
+  }
+}
